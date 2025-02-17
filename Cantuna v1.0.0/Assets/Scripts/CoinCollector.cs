@@ -1,4 +1,5 @@
 using UnityEngine;
+
 public class CoinCollector : MonoBehaviour
 {
     [Tooltip("Cantidad de puntos que esta moneda otorga al ser recogida.")]
@@ -6,17 +7,23 @@ public class CoinCollector : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        // Verifica si el objeto que colisiona es el jugador
         if (other.CompareTag("Player"))
         {
-            // Incrementa el contador de monedas en el jugador
-            PlayerCoinCounter playerCounter = other.GetComponent<PlayerCoinCounter>();
-            if (playerCounter != null)
+            // 🔥 Obtener la referencia del contador de monedas
+            PlayerCoinCounter coinCounter = other.GetComponent<PlayerCoinCounter>();
+            if (coinCounter != null)
             {
-                playerCounter.AddCoins(coinValue);
+                coinCounter.AddCoins(coinValue); // ⬅ Ahora se suma correctamente
             }
 
-            // Destruye la moneda
+            // 🔥 Asegurar que la IA del jugador reciba el evento de recogida de moneda
+            EndlessRunnerPlayer player = other.GetComponent<EndlessRunnerPlayer>();
+            if (player != null)
+            {
+                player.CollectCoin();
+            }
+
+            // Destruir la moneda después de recogerla
             Destroy(gameObject);
         }
     }

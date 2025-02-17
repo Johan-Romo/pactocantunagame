@@ -4,10 +4,16 @@ public class ObstacleCollision : MonoBehaviour
 {
     private void OnTriggerEnter(Collider other)
     {
-        // Verifica si el objeto que colisiona es el jugador
         if (other.CompareTag("Player"))
         {
-            // Accede al script de salud del jugador y aplica daño
+            // 🔥 Reduce la velocidad del jugador
+            EndlessRunnerPlayer player = other.GetComponent<EndlessRunnerPlayer>();
+            if (player != null)
+            {
+                player.SlowDown();  // ⬅ Se reduce la velocidad correctamente
+            }
+
+            // 🔥 Aplica daño al jugador si hay sistema de vidas
             PlayerHealth playerHealth = other.GetComponent<PlayerHealth>();
             if (playerHealth != null)
             {
