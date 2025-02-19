@@ -5,25 +5,38 @@ public class EndlessRunnerPlayer : MonoBehaviour
 {
     [Header("Velocidades")]
     public float startSpeed = 2f;
-    public float lateralSpeed = 5f;
     public float maxSpeed = 30f;
     public float minSpeed = 2f;
     public float timeToMaxSpeed = 90f;
     public float collisionSlowdownFactor = 0.8f;
     public float timeBonusThreshold = 15f;
 
+    [Tooltip("Controla la rapidez para moverse a otro carril.")]
+    public float lateralSpeed = 10f;
+
     [Header("Salto y Gravedad")]
     public float jumpForce = 10f;
     public float gravity = 20f;
 
+    [Header("Carriles")]
+    private float[] lanePositions = { 101.46f, 104.8f, 108.13f };
+    private int currentLane = 1;
+
     private CharacterController controller;
     private Vector3 moveDirection = Vector3.zero;
-    private float elapsedTime = 0f;
     private float currentSpeed;
+
+    private float elapsedTime = 0f;
     private float timeSinceLastCollision = 0f;
     private bool recoveringSpeed = false;
 
-    private int coinsCollected = 0; // 🔥 Se usa correctamente ahora
+    // Variables para gestionar la recuperación de velocidad tras un choque
+    private float previousSpeed = 0f;
+    private float recoveryTime = 2f; 
+    private float recoveryTimer = 0f;
+
+    private bool isJumping = false;
+    private int coinsCollected = 0;
 
     void Start()
     {
@@ -36,10 +49,16 @@ public class EndlessRunnerPlayer : MonoBehaviour
         elapsedTime += Time.deltaTime;
         timeSinceLastCollision += Time.deltaTime;
 
+        // Lógica de recuperación de velocidad tras una colisión
         if (recoveringSpeed)
         {
-            currentSpeed = Mathf.Lerp(currentSpeed, maxSpeed, Time.deltaTime / 5f);
-            if (currentSpeed >= maxSpeed * 0.95f) recoveringSpeed = false;
+            recoveryTimer += Time.deltaTime;
+            currentSpeed = Mathf.Lerp(currentSpeed, previousSpeed, recoveryTimer / recoveryTime);
+
+            if (recoveryTimer >= recoveryTime)
+            {
+                recoveringSpeed = false;
+            }
         }
         else
         {
@@ -49,44 +68,77 @@ public class EndlessRunnerPlayer : MonoBehaviour
         }
 
         currentSpeed = Mathf.Clamp(currentSpeed, minSpeed, maxSpeed);
+        moveDirection.x = currentSpeed;
 
-        float xMove = currentSpeed;
-        float zMove = 0f;
+        if (Input.GetKeyDown(KeyCode.D) && currentLane > 0)
+        {
+            currentLane--;
+        }
+        else if (Input.GetKeyDown(KeyCode.A) && currentLane < 2)
+        {
+            currentLane++;
+        }
 
-        if (Input.GetKey(KeyCode.A)) zMove = -lateralSpeed;
-        else if (Input.GetKey(KeyCode.D)) zMove = lateralSpeed;
+        float offsetZ = lanePositions[currentLane] - transform.position.z;
+        float distanceThisFrame = lateralSpeed * Time.deltaTime;
+        float moveZ = 0f;
+
+        if (Mathf.Abs(offsetZ) <= distanceThisFrame)
+        {
+            Vector3 tempPos = transform.position;
+            tempPos.z = lanePositions[currentLane];
+            transform.position = tempPos;
+            moveZ = 0f;
+        }
+        else
+        {
+            moveZ = Mathf.Sign(offsetZ) * lateralSpeed;
+        }
+
+        moveDirection.z = moveZ;
 
         if (controller.isGrounded)
         {
             moveDirection.y = -1f;
-            if (Input.GetKeyDown(KeyCode.Space)) moveDirection.y = jumpForce;
+            if (Input.GetKeyDown(KeyCode.W))
+            {
+                moveDirection.y = jumpForce;
+                isJumping = true;
+            }
         }
         else
         {
             moveDirection.y -= gravity * Time.deltaTime;
         }
 
-        moveDirection.x = xMove;
-        moveDirection.z = zMove;
+        if (isJumping && Input.GetKeyDown(KeyCode.S))
+        {
+            moveDirection.y = -jumpForce * 1.5f;
+            isJumping = false;
+        }
+
         controller.Move(moveDirection * Time.deltaTime);
     }
 
     /// <summary>
-    /// Reduce la velocidad al chocar con un obstáculo.
+    /// Reduce la velocidad al chocar con un obstáculo y luego la recupera progresivamente.
     /// </summary>
     public void SlowDown()
     {
-        currentSpeed *= collisionSlowdownFactor;
+        previousSpeed = currentSpeed; // Guardamos la velocidad antes del choque
+        currentSpeed *= collisionSlowdownFactor; // Reducimos la velocidad temporalmente
         elapsedTime = Mathf.Clamp(elapsedTime - 10f, 0f, timeToMaxSpeed);
         timeSinceLastCollision = 0f;
+
         recoveringSpeed = true;
+        recoveryTimer = 0f;
     }
 
     /// <summary>
-    /// Aumenta la cantidad de monedas recolectadas y acelera la velocidad.
+    /// Incrementa la cantidad de monedas.
     /// </summary>
     public void CollectCoin()
     {
-        coinsCollected++; // 🔥 Ahora sí se usa la variable correctamente
+        coinsCollected++;
     }
 }

@@ -9,6 +9,7 @@ public class InfiniteObstacleAndCoinGenerator : MonoBehaviour
     [Header("Prefabs")]
     public GameObject[] obstaclePrefabs;
     public GameObject coinPrefab;
+    
 
     [Header("Parámetros de Generación")]
     public float[] lanePositionsZ = { -2f, 0f, 2f };
@@ -23,11 +24,14 @@ public class InfiniteObstacleAndCoinGenerator : MonoBehaviour
 
     private float nextSpawnX;
     private List<GameObject> spawnedObjects = new List<GameObject>();
+    [Header("Enemigo")]
+    public GameObject dynamicRunnerPrefab; // <-- 1) NUEVO CAMPO
+
 
     // 🔥 Variables de IA Adaptativa
     private float survivalTime = 0f;
     private float maxDifficulty = 7.0f;
-    private float obstacleIncreaseRate = 0.2f;
+    private float obstacleIncreaseRate = 0.3f;
 
     void Start()
     {
@@ -51,40 +55,60 @@ public class InfiniteObstacleAndCoinGenerator : MonoBehaviour
     }
 
     void SpawnSegment()
+{
+    // Asegurar que el primer spawn de obstáculos esté fuera de la zona segura
+    if (nextSpawnX < player.position.x + safeZoneDistance)
     {
-        List<int> blockedLanes = new List<int>();
-
-        // 🔥 Aumentar la cantidad de obstáculos con el tiempo
-        int lanesToBlock = Random.Range(1, Mathf.Clamp(1 + (int)(survivalTime * obstacleIncreaseRate), 1, 3));
-
-        while (blockedLanes.Count < lanesToBlock)
-        {
-            int randomLane = Random.Range(0, lanePositionsZ.Length);
-            if (!blockedLanes.Contains(randomLane))
-            {
-                blockedLanes.Add(randomLane);
-                SpawnObstacle(lanePositionsZ[randomLane]);
-            }
-        }
-
-        for (int i = 0; i < lanePositionsZ.Length; i++)
-        {
-            if (!blockedLanes.Contains(i))
-            {
-                SpawnCoinGroup(lanePositionsZ[i]);
-            }
-        }
-
-        float difficultyFactor = Mathf.Clamp(1.0f + (survivalTime / 80f), 1.0f, maxDifficulty);
-        float spawnDistance = Mathf.Lerp(maxSpawnDistance, minSpawnDistance, difficultyFactor / maxDifficulty);
-        nextSpawnX += spawnDistance;
+        nextSpawnX = player.position.x + safeZoneDistance;
     }
+
+    List<int> blockedLanes = new List<int>();
+
+    // 🔥 Aumentar la cantidad de obstáculos con el tiempo
+    int lanesToBlock = Random.Range(1, Mathf.Clamp(1 + (int)(survivalTime * obstacleIncreaseRate), 1, 3));
+
+    while (blockedLanes.Count < lanesToBlock)
+    {
+        int randomLane = Random.Range(0, lanePositionsZ.Length);
+        if (!blockedLanes.Contains(randomLane))
+        {
+            blockedLanes.Add(randomLane);
+            SpawnObstacle(lanePositionsZ[randomLane]);
+        }
+    }
+
+    for (int i = 0; i < lanePositionsZ.Length; i++)
+    {
+        if (!blockedLanes.Contains(i))
+        {
+            SpawnCoinGroup(lanePositionsZ[i]);
+        }
+    }
+
+    // 🔥 NUEVO: generar enemigo dinámico con probabilidad
+    float randChance = Random.Range(0f, 1f);
+    if (randChance < 0.2f && dynamicRunnerPrefab != null)
+    {
+        int randomLane = Random.Range(0, lanePositionsZ.Length);
+        float laneZ = lanePositionsZ[randomLane];
+
+        Vector3 spawnPosition = new Vector3(nextSpawnX, obstacleHeight, laneZ);
+        GameObject enemy = Instantiate(dynamicRunnerPrefab, spawnPosition, Quaternion.identity);
+        spawnedObjects.Add(enemy);
+    }
+
+    // Ajuste dinámico de la distancia de spawn
+    float difficultyFactor = Mathf.Clamp(1.0f + (survivalTime / 80f), 1.0f, maxDifficulty);
+    float spawnDistance = Mathf.Lerp(maxSpawnDistance, minSpawnDistance, difficultyFactor / maxDifficulty);
+    nextSpawnX += spawnDistance;
+}
 
     void SpawnObstacle(float laneZ)
     {
         GameObject obstaclePrefab = obstaclePrefabs[Random.Range(0, obstaclePrefabs.Length)];
         Vector3 spawnPosition = new Vector3(nextSpawnX, obstacleHeight, laneZ);
-        GameObject newObstacle = Instantiate(obstaclePrefab, spawnPosition, Quaternion.identity);
+        Quaternion spawnRotation = Quaternion.Euler(0, -90, 0);
+        GameObject newObstacle = Instantiate(obstaclePrefab, spawnPosition, spawnRotation);
         spawnedObjects.Add(newObstacle);
     }
 
