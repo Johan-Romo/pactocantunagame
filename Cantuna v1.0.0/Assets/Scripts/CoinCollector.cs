@@ -5,25 +5,29 @@ public class CoinCollector : MonoBehaviour
     [Tooltip("Cantidad de puntos que esta moneda otorga al ser recogida.")]
     public int coinValue = 1;
 
+    [Header("Audio")]
+    [Tooltip("Clip de sonido que se reproducirá al recoger la moneda.")]
+    public AudioClip coinSound;
+
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
         {
-            // 🔥 Obtener la referencia del contador de monedas
+
             PlayerCoinCounter coinCounter = other.GetComponent<PlayerCoinCounter>();
             if (coinCounter != null)
             {
-                coinCounter.AddCoins(coinValue); // ⬅ Ahora se suma correctamente
+                coinCounter.AddCoins(coinValue);
             }
-
-            // 🔥 Asegurar que la IA del jugador reciba el evento de recogida de moneda
             EndlessRunnerPlayer player = other.GetComponent<EndlessRunnerPlayer>();
             if (player != null)
             {
                 player.CollectCoin();
             }
-
-            // Destruir la moneda después de recogerla
+            if (coinSound != null)
+            {
+                AudioSource.PlayClipAtPoint(coinSound, transform.position, 1f);
+            }
             Destroy(gameObject);
         }
     }

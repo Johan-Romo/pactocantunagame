@@ -15,6 +15,10 @@ public class PlayerHealth : MonoBehaviour
     [Header("Game Over")]
     [Tooltip("Panel de Game Over que se activa cuando las vidas llegan a 0.")]
     public GameObject gameOverPanel;
+    public Image iconVida;
+    public Image iconPiedra;
+
+
 
     private void Start()
     {
@@ -65,6 +69,10 @@ public class PlayerHealth : MonoBehaviour
     /// </summary>
     private void GameOver()
     {
+
+        iconVida.gameObject.SetActive(false);
+        iconPiedra.gameObject.SetActive(false);
+
         // Activa el panel de Game Over si está configurado
         if (gameOverPanel != null)
         {
